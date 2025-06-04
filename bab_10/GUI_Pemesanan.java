@@ -19,12 +19,7 @@ import javax.swing.JOptionPane;
  * @author jamil
  */
 public class GUI_Pemesanan extends javax.swing.JFrame {
-    // Variabel untuk koneksi database
-    public Connection conn;
-    // Variabel untuk statement SQL
-    public Statement stmt;
-    // private String eventIdDipilih; // Hapus atau komentari baris ini
-    private int idPemesananDipilih = -1; // Untuk menyimpan ID pemesanan yang dipilih dari tabel
+    
 
     /**
      * Creates new form GUI_Pembayaran
@@ -34,8 +29,14 @@ public class GUI_Pemesanan extends javax.swing.JFrame {
         koneksi(); // Panggil method koneksi
         tampilData(); // Panggil method untuk menampilkan data awal
         clearInputFields(); // Bersihkan input fields saat awal
-//        DefaultTableModel model = (DefaultTableModel) tblData.getModel();
     }
+    
+    // Variabel untuk koneksi database
+    public Connection conn;
+    // Variabel untuk statement SQL
+    public Statement stmt;
+    // private String eventIdDipilih; // Hapus atau komentari baris ini
+    private int idPemesananDipilih = -1; // Untuk menyimpan ID pemesanan yang dipilih dari tabel
     
     // Method untuk membangun koneksi ke database
     public void koneksi() {

@@ -22,11 +22,7 @@ import javax.swing.JOptionPane;
  */
 public class GUI_Pembayaran extends javax.swing.JFrame {
 
-    // Variabel untuk koneksi database
-    public Connection conn;
-    // Variabel untuk statement SQL
-    public Statement stmt;
-    private int idPembayaranDipilih = -1; // Untuk menyimpan ID pembayaran yang dipilih
+    
 
     /**
      * Creates new form GUI_Pembayaran
@@ -37,6 +33,12 @@ public class GUI_Pembayaran extends javax.swing.JFrame {
         tampilData();
         clearInputFields();
     }
+    
+    // Variabel untuk koneksi database
+    public Connection conn;
+    // Variabel untuk statement SQL
+    public Statement stmt;
+    private int idPembayaranDipilih = -1; // Untuk menyimpan ID pembayaran yang dipilih
     
     public void koneksi() {
         try {
@@ -185,6 +187,7 @@ public class GUI_Pembayaran extends javax.swing.JFrame {
             e.printStackTrace();
         }
     }
+    
     private void prosesUpdateData() {
         if (idPembayaranDipilih == -1) {
             JOptionPane.showMessageDialog(this, "Pilih data pembayaran yang akan diupdate dari tabel.", "Error", JOptionPane.ERROR_MESSAGE);

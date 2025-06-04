@@ -20,12 +20,6 @@ import javax.swing.JOptionPane;
  */
 public class GUI_Event extends javax.swing.JFrame {
 
-    // Variabel untuk koneksi database
-    public Connection conn;
-    // Variabel untuk statement SQL
-    public Statement stmt;
-    private String eventIdDipilih; // Untuk menyimpan ID event yang dipilih dari tabel
-
     /**
      * Creates new form GUI_Event
      */
@@ -36,14 +30,19 @@ public class GUI_Event extends javax.swing.JFrame {
         clearInputFields(); // Bersihkan input fields saat awal
     }
 
+    // Variabel untuk koneksi database
+    public Connection conn;
+    // Variabel untuk statement SQL
+    public Statement stmt;
+    private String eventIdDipilih; // Untuk menyimpan ID event yang dipilih dari tabel
+    
     // Method untuk membangun koneksi ke database
     public void koneksi() {
         try {
             conn = null;
-            // TODO: Ganti nama_database, user, dan password sesuai dengan konfigurasi MySQL Anda
-            String url = "jdbc:mysql://localhost:3306/db_event_management?serverTimezone=UTC"; // Ganti db_event_management jika perlu
-            String user = "root"; // User database Anda
-            String password = ""; // Password database Anda
+            String url = "jdbc:mysql://localhost:3306/db_event_management?serverTimezone=UTC"; 
+            String user = "root"; 
+            String password = ""; 
 
             Class.forName("com.mysql.cj.jdbc.Driver");
             conn = DriverManager.getConnection(url, user, password);
@@ -106,7 +105,6 @@ public class GUI_Event extends javax.swing.JFrame {
         btnSimpan.setEnabled(true); // Aktifkan tombol simpan
         btnUpdate.setEnabled(false); // Non-aktifkan tombol update sampai item dipilih
         btnHapus.setEnabled(false); // Non-aktifkan tombol hapus sampai item dipilih
-
     }
 
     // Method untuk mengisi form input ketika item di tabel dipilih
