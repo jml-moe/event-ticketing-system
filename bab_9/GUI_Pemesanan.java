@@ -13,7 +13,8 @@ import javax.swing.table.DefaultTableModel;
  */
 public class GUI_Pemesanan extends javax.swing.JFrame {
 
-    private Object pemesanan;
+    private PemesananTiket pemesanan = new PemesananTiket("Konser Musik", "Jakarta", "2025-07-01", 50000.0, 100);
+
 
     /**
      * Creates new form GUI_Pembayaran
@@ -254,8 +255,8 @@ public class GUI_Pemesanan extends javax.swing.JFrame {
         txtArea.append("=== STRUK PEMESANAN TIKET ===\n");
         txtArea.append("Tanggal Cetak: " + java.time.LocalDateTime.now().toString() + "\n\n");
         
-        // Cetak informasi pemesanan menggunakan interface
-        pemesanan.cetakKeArea(txtArea);
+        // Menggunakan method dari interface Bookable untuk mencetak info
+        txtArea.append(pemesanan.getInfoBooking() + "\n\n");
         
         // Cetak semua data dari table
         DefaultTableModel model = (DefaultTableModel) tblData.getModel();

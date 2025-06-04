@@ -53,6 +53,7 @@ public class PemesananTiket extends EventTicket implements Bookable{
         return getJumlahTiket() > 0 ? "Tiket tersedia." : "Tiket habis.";
     }
 
+    // Implementasi interface Bookable
     @Override
     public boolean bookTiket(int jumlah) {
         if (jumlah <= getJumlahTiket() && jumlah > 0) {
