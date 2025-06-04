@@ -4,11 +4,17 @@
  */
 package bab_10;
 
-//import bab_3.*;
+
 import bab_7.*;
-import bab_6.*;
-import bab_5.*;
+
 import javax.swing.table.DefaultTableModel;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -16,14 +22,256 @@ import javax.swing.table.DefaultTableModel;
  */
 public class GUI_Pembayaran extends javax.swing.JFrame {
 
-    private DefaultTableModel model;
+    // Variabel untuk koneksi database
+    public Connection conn;
+    // Variabel untuk statement SQL
+    public Statement stmt;
+    private int idPembayaranDipilih = -1; // Untuk menyimpan ID pembayaran yang dipilih
 
     /**
      * Creates new form GUI_Pembayaran
      */
     public GUI_Pembayaran() {
         initComponents();
-        model = (DefaultTableModel) tblData.getModel();
+        koneksi();
+        tampilData();
+        clearInputFields();
+    }
+    
+    public void koneksi() {
+        try {
+            conn = null;
+            // TODO: Ganti nama_database, user, dan password sesuai dengan konfigurasi MySQL Anda
+            String url = "jdbc:mysql://localhost:3306/db_event_management?serverTimezone=UTC"; // Ganti db_event_management jika perlu
+            String user = "root"; // User database Anda
+            String password = ""; // Password database Anda
+
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            conn = DriverManager.getConnection(url, user, password);
+            stmt = conn.createStatement();
+            // JOptionPane.showMessageDialog(null, "Koneksi Berhasil!"); // Opsional: pesan koneksi berhasil
+        } catch (ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(null, "Driver tidak ditemukan: " + e.getMessage());
+            System.exit(0);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Koneksi gagal: " + e.getMessage());
+            System.exit(0);
+        } catch (Exception es) {
+            JOptionPane.showMessageDialog(null, "Terjadi kesalahan umum: " + es.getMessage());
+            System.exit(0);
+        }
+    }
+    
+    private void tampilData(){
+        DefaultTableModel currentModel = new DefaultTableModel();
+        // Kolom untuk ID (disembunyikan)
+        currentModel.addColumn("ID_Pembayaran_Hidden");
+        // Kolom yang terlihat
+        currentModel.addColumn("Nama Pembayar");
+        currentModel.addColumn("Email");
+        currentModel.addColumn("No. HP");
+        currentModel.addColumn("Jumlah Tiket Dibayar");
+        currentModel.addColumn("Metode Pembayaran");
+
+        try {
+            if (conn == null || conn.isClosed()) {
+                koneksi();
+            }
+            String sql = "SELECT id_pembayaran, nama_pembayar, email_pembayar, no_hp_pembayar, jumlah_tiket_dibayar, metode_pembayaran FROM tb_pembayaran";
+            try (Statement tempStmt = conn.createStatement();
+                 ResultSet rs = tempStmt.executeQuery(sql)) {
+
+                while (rs.next()) {
+                    currentModel.addRow(new Object[]{
+                        rs.getInt("id_pembayaran"), // ID
+                        rs.getString("nama_pembayar"),
+                        rs.getString("email_pembayar"),
+                        rs.getString("no_hp_pembayar"),
+                        rs.getInt("jumlah_tiket_dibayar"),
+                        rs.getString("metode_pembayaran")
+                    });
+                }
+            }
+            tblData.setModel(currentModel);
+
+            // Sembunyikan kolom ID (indeks 0)
+            if (tblData.getColumnModel().getColumnCount() > 0) {
+                tblData.getColumnModel().getColumn(0).setMinWidth(0);
+                tblData.getColumnModel().getColumn(0).setMaxWidth(0);
+                tblData.getColumnModel().getColumn(0).setWidth(0);
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal mengambil data pembayaran: " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+    
+    private void clearInputFields() {
+        txtNama.setText("");
+        txtEmail.setText("");
+        txtNomor.setText("");
+        txtTiket.setText("");
+        cmb_bayar.setSelectedIndex(0); // Set ke item pertama
+        idPembayaranDipilih = -1;
+
+        btnSimpan.setEnabled(true);
+        btnUpdate.setEnabled(false);
+        btnHapus.setEnabled(false);
+        txtNama.requestFocus();
+    }
+
+    private void itemPilih(){
+        int selectedRow = tblData.getSelectedRow();
+        if (selectedRow != -1) {
+            DefaultTableModel currentModel = (DefaultTableModel) tblData.getModel();
+            // ID diambil dari model (indeks 0), meskipun tidak terlihat
+            idPembayaranDipilih = (Integer) currentModel.getValueAt(selectedRow, 0);
+
+            txtNama.setText(currentModel.getValueAt(selectedRow, 1).toString());        // Nama di indeks 1
+            txtEmail.setText(currentModel.getValueAt(selectedRow, 2).toString());       // Email di indeks 2
+            txtNomor.setText(currentModel.getValueAt(selectedRow, 3).toString());       // No HP di indeks 3
+            txtTiket.setText(currentModel.getValueAt(selectedRow, 4).toString());       // Jml Tiket di indeks 4
+            cmb_bayar.setSelectedItem(currentModel.getValueAt(selectedRow, 5).toString());// Metode Bayar di indeks 5
+
+            btnSimpan.setEnabled(false);
+            btnUpdate.setEnabled(true);
+            btnHapus.setEnabled(true);
+        }
+    }
+    
+    private void prosesSimpanData(){
+        String nama = txtNama.getText();
+        String email = txtEmail.getText();
+        String nomorHp = txtNomor.getText();
+        String jumlahTiketStr = txtTiket.getText();
+        String metodeBayar = cmb_bayar.getSelectedItem().toString();
+
+        if (nama.isEmpty() || email.isEmpty() || nomorHp.isEmpty() || jumlahTiketStr.isEmpty() || metodeBayar.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Semua field harus diisi!", "Error Input", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            int jumlahTiket = Integer.parseInt(jumlahTiketStr);
+            if (jumlahTiket <= 0) {
+                JOptionPane.showMessageDialog(this, "Jumlah tiket harus lebih dari 0.", "Error Input", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (conn == null || conn.isClosed()) {
+                koneksi();
+            }
+
+            String sql = "INSERT INTO tb_pembayaran (nama_pembayar, email_pembayar, no_hp_pembayar, jumlah_tiket_dibayar, metode_pembayaran) VALUES (?, ?, ?, ?, ?)";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, nama);
+                ps.setString(2, email);
+                ps.setString(3, nomorHp);
+                ps.setInt(4, jumlahTiket);
+                ps.setString(5, metodeBayar);
+
+                int rowsInserted = ps.executeUpdate();
+                if (rowsInserted > 0) {
+                    JOptionPane.showMessageDialog(this, "Data pembayaran berhasil disimpan!");
+                    tampilData();
+                    clearInputFields();
+                }
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Jumlah Tiket harus berupa angka yang valid!", "Error Input", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal menyimpan data pembayaran: " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+    private void prosesUpdateData() {
+        if (idPembayaranDipilih == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih data pembayaran yang akan diupdate dari tabel.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String nama = txtNama.getText();
+        String email = txtEmail.getText();
+        String nomorHp = txtNomor.getText();
+        String jumlahTiketStr = txtTiket.getText();
+        String metodeBayar = cmb_bayar.getSelectedItem().toString();
+
+        if (nama.isEmpty() || email.isEmpty() || nomorHp.isEmpty() || jumlahTiketStr.isEmpty() || metodeBayar.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Semua field harus diisi!", "Error Input", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            int jumlahTiket = Integer.parseInt(jumlahTiketStr);
+            if (jumlahTiket <= 0) {
+                JOptionPane.showMessageDialog(this, "Jumlah tiket harus lebih dari 0.", "Error Input", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (conn == null || conn.isClosed()) {
+                koneksi();
+            }
+
+            String sql = "UPDATE tb_pembayaran SET nama_pembayar = ?, email_pembayar = ?, no_hp_pembayar = ?, jumlah_tiket_dibayar = ?, metode_pembayaran = ? WHERE id_pembayaran = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, nama);
+                ps.setString(2, email);
+                ps.setString(3, nomorHp);
+                ps.setInt(4, jumlahTiket);
+                ps.setString(5, metodeBayar);
+                ps.setInt(6, idPembayaranDipilih);
+
+                int rowsUpdated = ps.executeUpdate();
+                if (rowsUpdated > 0) {
+                    JOptionPane.showMessageDialog(this, "Data pembayaran berhasil diupdate!");
+                    tampilData();
+                    clearInputFields();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Data pembayaran tidak ditemukan atau tidak ada perubahan.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Jumlah Tiket harus berupa angka yang valid!", "Error Input", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal mengupdate data pembayaran: " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+    
+    private void prosesHapusData() {
+        if (idPembayaranDipilih == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih data pembayaran yang akan dihapus dari tabel.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Apakah Anda yakin ingin menghapus data pembayaran dengan ID " + idPembayaranDipilih + "?",
+                "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                if (conn == null || conn.isClosed()) {
+                    koneksi();
+                }
+                String sql = "DELETE FROM tb_pembayaran WHERE id_pembayaran = ?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, idPembayaranDipilih);
+
+                    int rowsDeleted = ps.executeUpdate();
+                    if (rowsDeleted > 0) {
+                        JOptionPane.showMessageDialog(this, "Data pembayaran berhasil dihapus!");
+                        tampilData();
+                        clearInputFields();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Data pembayaran tidak ditemukan.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                }
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(this, "Gagal menghapus data pembayaran: " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -45,11 +293,11 @@ public class GUI_Pembayaran extends javax.swing.JFrame {
         txtNomor = new javax.swing.JTextField();
         txtTiket = new javax.swing.JTextField();
         cmb_bayar = new javax.swing.JComboBox<>();
-        btnBayar = new javax.swing.JButton();
         jScrollPane2 = new javax.swing.JScrollPane();
         tblData = new javax.swing.JTable();
         btnSimpan = new javax.swing.JButton();
         btnHapus = new javax.swing.JButton();
+        btnUpdate = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -65,27 +313,25 @@ public class GUI_Pembayaran extends javax.swing.JFrame {
 
         cmb_bayar.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Cash", "E-Wallet", "Kartu Kredit", "Transfer Bank" }));
 
-        btnBayar.setText("Bayar");
-        btnBayar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnBayarActionPerformed(evt);
-            }
-        });
-
         tblData.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 
             },
             new String [] {
-                "Nama", "Email", "Metode Bayar", "Jml Tiket"
+                "Nama", "Email", "No. HP", "Jml Tiket", "Metode Bayar"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.String.class, java.lang.Object.class, java.lang.String.class, java.lang.Double.class
+                java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Double.class, java.lang.Object.class
             };
 
             public Class getColumnClass(int columnIndex) {
                 return types [columnIndex];
+            }
+        });
+        tblData.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                tblDataMouseClicked(evt);
             }
         });
         jScrollPane2.setViewportView(tblData);
@@ -104,6 +350,13 @@ public class GUI_Pembayaran extends javax.swing.JFrame {
             }
         });
 
+        btnUpdate.setText("Update");
+        btnUpdate.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnUpdateActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -118,21 +371,20 @@ public class GUI_Pembayaran extends javax.swing.JFrame {
                     .addComponent(jLabel3, javax.swing.GroupLayout.Alignment.LEADING))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(btnBayar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(cmb_bayar, 0, 112, Short.MAX_VALUE)
                     .addComponent(txtTiket)
                     .addComponent(txtNomor)
                     .addComponent(txtEmail)
                     .addComponent(txtNama))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 430, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(22, 22, 22)
                         .addComponent(btnSimpan)
                         .addGap(18, 18, 18)
-                        .addComponent(btnHapus)))
+                        .addComponent(btnHapus)
+                        .addGap(18, 18, 18)
+                        .addComponent(btnUpdate))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 430, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(28, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -163,41 +415,34 @@ public class GUI_Pembayaran extends javax.swing.JFrame {
                     .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnBayar)
                     .addComponent(btnSimpan)
-                    .addComponent(btnHapus))
+                    .addComponent(btnHapus)
+                    .addComponent(btnUpdate))
                 .addContainerGap(32, Short.MAX_VALUE))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void btnBayarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBayarActionPerformed
-        int jumlah = Integer.parseInt(txtTiket.getText());
-        double harga = 50000.0; // Harga per tiket
-        double totalBayar = jumlah * harga;
-        System.out.println("Total Bayar: " + totalBayar);
-    }//GEN-LAST:event_btnBayarActionPerformed
-
     private void btnSimpanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSimpanActionPerformed
         // TODO add your handling code here:
-        String nama = txtNama.getText();
-        String email = txtEmail.getText();
-        String metodeBayar = cmb_bayar.getSelectedItem().toString();
-        int jumlah = Integer.parseInt(txtTiket.getText());
-
-        model.addRow(new Object[]{
-            nama, email, metodeBayar, jumlah
-        });
+        prosesSimpanData();
     }//GEN-LAST:event_btnSimpanActionPerformed
 
     private void btnHapusActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnHapusActionPerformed
         // TODO add your handling code here:
-        int selectedRow = tblData.getSelectedRow();
-        if (selectedRow != -1) {
-            model.removeRow(selectedRow);
-        }
+        prosesHapusData();
     }//GEN-LAST:event_btnHapusActionPerformed
+
+    private void tblDataMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tblDataMouseClicked
+        // TODO add your handling code here:
+        itemPilih();
+    }//GEN-LAST:event_tblDataMouseClicked
+
+    private void btnUpdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUpdateActionPerformed
+        // TODO add your handling code here:
+        prosesUpdateData();
+    }//GEN-LAST:event_btnUpdateActionPerformed
 
     /**
      * @param args the command line arguments
@@ -250,9 +495,9 @@ public class GUI_Pembayaran extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnBayar;
     private javax.swing.JButton btnHapus;
     private javax.swing.JButton btnSimpan;
+    private javax.swing.JButton btnUpdate;
     private javax.swing.JComboBox<String> cmb_bayar;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;

@@ -5,9 +5,7 @@
 package bab_10;
 
 import bab_7.*;
-import bab_6.*;
-import bab_5.*;
-import bab_3.*;
+
 
 /**
  *
